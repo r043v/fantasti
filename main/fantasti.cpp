@@ -1,32 +1,13 @@
 
-/* Gdl² - yAnl */
+/* fantasti launcher */
 
 #include "../Gdl/Gdl.h"
-
-//#include "./gfx/greenfont.h"
-//#include "./gfx/bluefont.h"
-//#include "./gfx/star.h"
 
 #include "list.h"
 #include "pid.h"
 #include "explorer.h"
 #include "rfkill.h"
 #include "cpupower.h"
-//#include <zip.h>
-
-/*
-u32 Map::set(arDeep*array,clDeep**tileset,
-	u32 tileNumber,u32 tileSizex,u32 tileSizey,
-	u32 sizex,u32 sizey,u32 scrollx,u32 scrolly,
-	outzone*out, u32 copyArray
-*/
-
-//arDeep keyboardAarray[  ] =
-
-//Map keyboardMap;
-
-//keyBoard.set( mapArray, tileset, tilesetFrmNb, 32, 32, 24, 64, 0, 0, screen, 0 );
-
 
 #define POWER_PATH "/sys/class/power_supply/"
 #define USB_POWER "axp20x-usb"
@@ -92,19 +73,6 @@ bool updateNetwork( struct network * network ){
   return update;
 }
 
-
-/*$ pacman -Sl pingu
-pingu fantasti-gameshell 0.4.i-1 [installed: 0.4.h-1]
-pingu gameshell 0.0.2-1 [installed]
-pingu libretro-bsnes-gameshell r1161.309341d0-1
-pingu libretro-pocketsnes-gameshell r228.354bcb5-1 [installed]
-pingu linux-gameshell 5.4.5-1 [installed]
-pingu linux-gameshell-headers 5.4.5-1 [installed]
-pingu mesa-lima 20.0.0_devel.1.ce52b49-1 [installed]
-pingu monsterwm-gameshell 0.3.f-1 [installed]
-*/
-
-
 struct package {
   char *name, *version;
   int state;
@@ -155,30 +123,15 @@ struct list * packages2List( struct package ** packages, int nb ){
 #define PACKAGE_UPGRADABLE 8
 
 void readRepository( struct repository * repo, char * name ){
-  //printf("update repository database\n");
   // update with pacman
   const char * refresh_cmd[] = { "sudo", "pacman", "-Sy", NULL };
   char *r = p_exec( refresh_cmd );
   if( r ) free( r );
 
-  //printf("get repository packages\n");
   // ask pacman list content of our specific repository
   const char * cmd[] = { "pacman", "-Sl", name, NULL };
   char ** res = pipe_exec( cmd );
   if( !res ) return;
-
-  /*int nnn=0;
-  while(1){
-    char * s = res[nnn++];
-    if( !s ) break;
-    printf("[%s]\n",s);
-  }*/
-
-  //printf("init repository struct\n");
-
-  // reset repo struct
-  //if( repo->buffer ) free( repo->buffer );
-  //memset( repo, 0, sizeof( struct repository ) );
 
   // ask expac to catch our whitelisted packages
   const char * whitelistCmd[] = { "bash", "-c", "expac -S '%D' pingu/gameshell | sed \"s/  /\\n/g\"", NULL };
@@ -207,14 +160,10 @@ void readRepository( struct repository * repo, char * name ){
   b += REPO_MAX_PACKAGE_NUMBER * sizeof( struct package );
 
   // loop around each package & fill our structs
-
-  //printf("loop packages\n");
-
   while( 1 ){
     struct package * package = &repo->packages[ repo->nb ];
     char * ptr = res[ repo->nb ];
     if( !ptr ) break;
-    //printf("[%s]\n",ptr);
 
     char * p = ptr;
     // repo name, skip
@@ -236,7 +185,6 @@ void readRepository( struct repository * repo, char * name ){
         w++; p++;
       }
       if( !*p && *w == '\n' ){
-      //if( !strcmp( whitelist[n], package->name ) ){
         package->whitelist = 1;
         //printf("%s match\n",whitelist[n]);
         break;
@@ -247,7 +195,6 @@ void readRepository( struct repository * repo, char * name ){
     if( !package->whitelist && !strcmp( "gameshell", package->name ) ) package->whitelist = 1;
 
     //printf("whitelist ? %i\n",package->whitelist);
-
     //printf("%s\n",package->name);
 
     // copy package version
@@ -311,55 +258,15 @@ bool updateCpu( struct power * power ){
       power->cpu[cpu].frequencyMhz = f/1000;
     }
 
-    //printf( "cpu %i %iMhz\n",cpu,f );
-
     cpu++;
   }
   power->cpuNumber = cpu;
   free( freqs );
 
-/*  char *sf = p_exec( getCpuFrequencyCmd );
-  char *p = sf, *start = p;
-  int cpu = 0;
-  printf("%s",sf);
-
-  if( sf && *sf ){
-    while( 1 ){
-      bool end = !*p;
-      if( *p == '\n' || !*p ){
-        *p = 0;
-        int f = atoi( start );
-
-        if( power->cpu[cpu].frequency != f ){
-          update = true;
-          power->cpu[cpu].frequency = f;
-          power->cpu[cpu].frequencyMhz = f/1000;
-        }
-
-        printf( "cpu %i %iMhz\n",cpu,f );
-
-        cpu++;
-        start = p+1;
-      }
-
-      if( end ) break;
-
-      p++;
-    };
-//  int f = atoi( sf );
-    free( sf );
-  }*/
-/*  if( power->cpu.frequency != f ){
-    update = true;
-    power->cpu.frequency = f;
-    power->cpu.frequencyMhz = f/1000;
-  }*/
-
   char * g = p_exec( getCpuGovernorCmd );
   if( g && strcmp( power->cpu[0].governor, g ) ){
     update = true;
     strncpy( power->cpu[0].governor, g, 31 );
-    //printf("%s\n",g);
   }
 
   if( g ) free( g );
@@ -378,8 +285,6 @@ bool confirm( void ){
 
 bool updatePower( struct power * power ){
   bool update = false;
-
-//  getPower();
 
   FILE * f;
 
@@ -707,73 +612,14 @@ struct entrieCommand entryCmds[] = {
 
       return 0;
 
-/*$ pacman -Sl pingu
-pingu fantasti-gameshell 0.4.i-1 [installed: 0.4.h-1]
-pingu gameshell 0.0.2-1 [installed]
-pingu libretro-bsnes-gameshell r1161.309341d0-1
-pingu libretro-pocketsnes-gameshell r228.354bcb5-1 [installed]
-pingu linux-gameshell 5.4.5-1 [installed]
-pingu linux-gameshell-headers 5.4.5-1 [installed]
-pingu mesa-lima 20.0.0_devel.1.ce52b49-1 [installed]
-pingu monsterwm-gameshell 0.3.f-1 [installed]
-*/
-
-// pacman -Sl pingu | grep -v "\[installed\]$" | cut -d" " -f2 > /tmp/available
-// pacman -Sl pingu | grep "\[installed\]$" | cut -d" " -f2 > /tmp/installed
-// pacman -Sl pingu | cut -d" " -f2 > /tmp/all
-// expac -S '%D' pingu/gameshell | sed "s/  /\n/g" > /tmp/whitelist
-// grep -v -f /tmp/whitelist /tmp/installed | grep -vx "^gameshell"
-
-// pacman -Sl pingu | grep "\[installed\]$" | cut -d" " -f2 > /tmp/installed
-
-// sed -n '/pattern/!{p;d}; w file_1' input.txt > file_2
-
-//pacman -Sl pingu | grep -v "\[installed\]$" | cut -d" " -f2 > /tmp/available
-
     } },
-
-/*
-    { "update", [] () {
-      //const char * cmds[] = { "xterm", "-e", "echo \"update pingu repository\" && sudo pacman -Sy && sudo pacman -S gameshell --noconfirm --needed && sudo pacman -S --needed --noconfirm $(sudo pacman -Sg gameshell) && read -p \"Press enter to continue\"", NULL }; // --noconfirm
-      //const char * cmds[] = { "xterm", "-e", "echo \"update pingu repository\" && sudo pacman --color=always -Sy && sudo pacman --color=always -S --needed $(paclist pingu | cut -f 1 -d \" \") && read -p \"Press enter to continue\"", NULL }; // --noconfirm
-      // sudo pacman -S --needed $(paclist pingu | cut -f 1 -d " ")
-      // pacman -Sl pingu | grep "installed:" | cut -d' ' -f2
-      // p=$(pacman -Sl pingu | grep "installed:" | cut -d' ' -f2) && [ -z "$p" ] && echo "system is up to date" || sudo pacman --color=always -S "$p"
-// ( p=$(pacman -Sl pingu | grep "installed:" | cut -d' ' -f2) && [ -z "$p" ] && echo "system is up to date" || sudo pacman --color=always -S "$p" ) && read -p "press enter to continue"
-      const char * cmds[] = { "xterm", "-e", "echo \"update pingu repository\" && sudo pacman --color=always -Sy && ( p=$(pacman -Sl pingu | grep \"installed:\" | cut -d' ' -f2) && [ -z \"$p\" ] && echo \"system is up to date\" || sudo pacman --color=always -S \"$p\" ) && read -p \"press enter to continue\"", NULL }; // --noconfirm
-      _exec( cmds, 0, 0 );
-      return 0;
-    } },
-*/
-    // restart X
 
 		{ NULL, NULL }
 };
 
-//clDeep ** croppedFont = 0;
-
 // uncrunch data...
 void uncrunchData(void)
 {	// uncrunch gfx from 4b gfm to 32b gfm
-	//unCrunchGfm(greenfont,greenfontFrmNb);
-	//unCrunchGfm(bluefont,bluefontFrmNb);
-/*
-	clDeep ** f = cropGfm( bluefont, bluefontFrmNb, 0,0,1,1 );
-
-	for( u32 n=0; n<bluefontFrmNb; n++ ){
-		free( bluefont[n] );
-		bluefont[n] = f[n];
-	}
-*/
-/*	clDeep ** f = cropGfm( greenfont, greenfontFrmNb, 0,0,1,1 );
-
-	for( u32 n=0; n<greenfontFrmNb; n++ ){
-		free( greenfont[n] );
-		greenfont[n] = f[n];
-	}
-*/
-	//croppedFont = cropGfm( bluefont, bluefontFrmNb, 0,0,1,1 );
-	//greenfont = cropGfm( greenfont, greenfontFrmNb, 0,0,1,1 );
 }
 
 char * font8x8;
@@ -802,8 +648,7 @@ int needUpdate = true;
 
 void onUpdate( void ){
   if( !isAppActive ){ Gdl_Sleep(10); return; }
-  //printf("%u\n",tick);
-  static u32 nextPowerCheck = tick+1000, nextNetworkCheck = tick;//, nextCpuCheck = tick;
+  static u32 nextPowerCheck = tick+1000, nextNetworkCheck = tick;
 
   if( nextPowerCheck < tick ){
     nextPowerCheck = tick + 3000;
@@ -814,19 +659,12 @@ void onUpdate( void ){
     nextNetworkCheck = ( ( network.ip && *network.ip ) ? 10000 : 3000 ) + tick;
     needUpdate |= updateNetwork( &network );
   }
-/*
-  if( nextCpuCheck < tick ){
-    nextCpuCheck = tick + 2000;
-    needUpdate |= updateCpu( &power );
-  }
-*/
 }
 
 int main(int argc, char const *argv[]) {
 	Gdl_init( "[fantasti]", SCREEN_WIDTH, SCREEN_HEIGHT );   // init the framebuffer
 
 	uncrunchData();
-	//setGdlfont(greenfont);
 
   initFreetype();
   ftFont = loadFreetypeFont( "/usr/local/share/fantasti/font.ttf" , 12 );
