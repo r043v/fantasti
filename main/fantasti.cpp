@@ -241,9 +241,9 @@ void readRepository( struct repository * repo, char * name ){
 }
 
 bool updateCpu( struct power * power ){
-  const char * getCpu0[] = { "sudo", "cat", "/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq", NULL };
-  const char * getCpuFrequencyCmd[] = { "sudo", "bash", "-c", "cat /sys/devices/system/cpu/cpu?/cpufreq/scaling_cur_freq", NULL };
-  const char * getCpuGovernorCmd[] = { "sudo", "cat", "/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor", NULL };
+  const char * getCpu0[] = { "cat", "/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq", NULL };
+  //const char * getCpuFrequencyCmd[] = { "sudo", "bash", "-c", "cat /sys/devices/system/cpu/cpu?/cpufreq/scaling_cur_freq", NULL };
+  const char * getCpuGovernorCmd[] = { "cat", "/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor", NULL };
 
   bool update = false;
 

@@ -2,11 +2,13 @@
 #include "cpupower.h"
 #include "pid.h"
 /*
-available frequency steps:  120 MHz, 240 MHz, 312 MHz, 408 MHz, 480 MHz, 504 MHz, 600 MHz, 648 MHz, 720 MHz, 816 MHz, 912 MHz, 1.01 GHz
+available frequency steps:  120 MHz, 240 MHz, 312 MHz, 408 MHz, 480 MHz, 504 MHz, 600 MHz, 648 MHz, 720 MHz, 816 MHz, 912 MHz, 1.01 GHz, 1.10 GHz, 1.20 GHz, 1.30 GHz, 1.40 GHz
 available cpufreq governors: conservative userspace powersave ondemand performance schedutil
 */
 
-const int frequencyKHz[] = {
+int * frequencyKHz = 0, frequencyKHzNb = 0;
+/*
+const int zfrequencyKHz[] = {
   120000,
   240000,
   312000,
@@ -18,10 +20,16 @@ const int frequencyKHz[] = {
   720000,
   816000,
   912000,
-  1010000
-};
+  1010000,
+  1100000,
+  1200000,
+  1300000,
+  1400000
+};*/
 
-const char * frequencies[] = {
+char ** frequencies = 0;
+/*
+const char * zfrequencies[] = {
   "120 MHz",
   "240 MHz",
   "312 MHz",
@@ -34,8 +42,11 @@ const char * frequencies[] = {
   "816 MHz",
   "912 MHz",
   "1.01 GHz",
+  "1.20 GHz",
+  "1.30 GHz",
+  "1.40 GHz",
   NULL
-};
+};*/
 
 const char * governors[] = {
   "performance",
@@ -61,8 +72,10 @@ const char * menu[] = {
 //const char * getCpuGovernor = "cpupower frequency-info | grep \"The governor\" | awk '{print $3}' | cut -d\"\\\"\" -f2";
 //const char * getCpuFreq = "cpupower frequency-info | grep \"current CPU\" | grep kernel | cut -d\" \" -f6";
 
-const char * getCpuFrequencyCmd[] = { "sudo", "cat", "/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq" };
-const char * getCpuGovernorCmd[] = { "sudo", "cat", "/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor" };
+//const char * getCpuFrequencyCmd[] = { "cat", "/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq", NULL };
+//const char * getCpuGovernorCmd[] = { "cat", "/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor", NULL };
+const char * getCpuAvailableFrequencyCmd[] = { "cat", "/sys/devices/system/cpu/cpu0/cpufreq/scaling_available_frequencies", NULL };
+
 /*
 [gs@gs ~]$ sudo cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
 schedutil
@@ -214,16 +227,95 @@ int cpuPower( char * governor, int frequency ){
   }
 */
   if( s == 4 ){ // user choice
-    struct list * lf = string2List( frequencies );
+
+      // does we got the available frequency list ?
+      if( !frequencyKHz ){ // no, load them
+        //printf("load available freqs\n");
+        char * sf = p_exec( getCpuAvailableFrequencyCmd );
+//        printf("%s\n",sf);
+
+        if( !sf ) return -1;
+
+        if( *sf == 'c' ){ // cat: file not found
+          free(sf);
+          return -1;
+        }
+
+        frequencyKHz = (int*)malloc( 1024 * sizeof( int ) );
+        int nb = 0;
+        char *p = sf, *start = p;
+        while( 1 ){
+          if( *p == ' ' ){
+            *p = 0;
+            frequencyKHz[ nb++ ] = atoi( start );
+            //printf("%s\n",start);
+            p++;
+            while( *p == ' ' ) p++;
+            start = p;
+            continue;
+          }
+
+          if( *p == 0 ){
+            break;
+            /*frequencyKHz[ nb++ ] = atoi( start );
+            printf("%s\n",start);
+            break;*/
+          }
+
+/*          if( *p == '\n' ){
+            *p = 0;
+            frequencyKHz[ nb++ ] = atoi( start );
+            printf("lr %s\n",start);
+            break;
+          }
+*/
+          p++;
+        };
+        free(sf);
+        frequencyKHzNb = nb;
+        int * f = (int*)realloc( frequencyKHz, nb * sizeof(int) );
+        if( f ) frequencyKHz = f;
+        frequencies = (char**)malloc( nb*64 + (nb+1) * sizeof(char*) );
+        p = (char*)frequencies + (nb+1) * sizeof(char*);
+        for( int n=0; n < nb ; n++ ){
+          frequencies[n] = p;
+          int f = frequencyKHz[n];
+          int l;
+          if( f > 1000000 ){ // GHz
+            float freq = f;
+            freq /= 1000000;
+            l = sprintf( p, "%1.1f GHz", freq );
+          } else { // MHz
+            l = sprintf( p, "%i MHz", f/1000 );
+          }
+          p += 2 + l;
+        }
+        frequencies[nb]=0;
+      }
+
+    struct list * lf = string2List( (const char**)frequencies );
     int fcurrent = -1;
 
     if( frequency && s == current ){ // already user choice, retreve current freq
-      for( int n = 0; n < sizeof(frequencyKHz); n++ )
-        if( frequency == frequencyKHz[n] ){
+      for( int n = 0; n < frequencyKHzNb; n++ ){
+      //int n = 0;
+      //while(1){
+        if( !frequencyKHz[n] ) break;
+        //printf("current %i, test %i\n",frequency,frequencyKHz[n]);
+        if( frequencyKHz[n] == frequency ){
+          //printf("%i match\n",frequency);
           fcurrent = n;
           lf->entries[n].type = 1;
           break;
         }
+
+        if( frequencyKHz[n] > frequency && frequencyKHz[n] - frequency < 50000 ){
+          fcurrent = n;
+          lf->entries[n].type = 1;
+          break;
+        }
+        //n++;
+      }
     }
 
     int sf = selectFromList("cpu speed", lf);
